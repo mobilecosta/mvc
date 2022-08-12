@@ -12,7 +12,7 @@ Tela de consulta MVC
 //-------------------------------------------------------------------
 User Function FBPCOA12()
 //Local aButtons := {{.F.,Nil},{.F.,Nil},{.F.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,"Salvar"},{.T.,"Cancelar"},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil}}
-//FWExecView('SOLICITAÇÃO DE RECURSOS - DESTINO',"FBPCOA12", 3,, { || .T. } )//, , ,aButtons )
+FWExecView('SOLICITAÇÃO DE RECURSOS - DESTINO',"FBPCOA12", 3,, { || .T. } )//, , ,aButtons )
 Return NIL
 
 Static Function ModelDef()
@@ -95,7 +95,7 @@ Local oStruZZ6 := FWFormStruct( 2, 'ZZ6' , { |x| ALLTRIM(x) $ 'ZZ6_FILIAL,ZZ6_DO
 Local oStruZZ62 := FWFormStruct( 2, 'ZZ6' , { |x| ALLTRIM(x) $ 'ZZ6_FILIAL,ZZ6_DOC,ZZ6_TIPO,ZZ6_DATA,ZZ6_CO,ZZ6_CLASSE,ZZ6_OPERAC,ZZ6_CC,ZZ6_ITCTA,ZZ6_CLVAL,ZZ6_VALOR,ZZ6_HIST,ZZ6_USRAP1,ZZ6_NUSAP1,ZZ6_STAT1,ZZ6_DTAP1,ZZ6_HRAP1, ZZ6_USRAP2,ZZ6_NUSAP2,ZZ6_STAT2,ZZ6_DTAP2,ZZ6_HRAP2,ZZ6_USRCTA,ZZ6_NUSCTA,ZZ6_STATCT,ZZ6_DTCTA,ZZ6_HRCTA' } )
 
 // Cria um objeto de Modelo de Dados baseado no ModelDef do fonte informado
-Local oModel   := FWLoadModel( 'FBPCOA11' )
+Local oModel   := FWLoadModel( 'FBPCOA12' )
 Local oView
 //Local oCalc1
 
@@ -412,10 +412,7 @@ Return
 */
 
 static function FBPCOA12POS()
-
-Alert("Ok")
-
-return .T.
+return ({|| .t.})
 
 
 
