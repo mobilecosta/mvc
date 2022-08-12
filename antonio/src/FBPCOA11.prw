@@ -13,11 +13,11 @@ Tela de consulta MVC
 User Function FBPCOA11()
 //Local aButtons := {{.F.,Nil},{.F.,Nil},{.F.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,"Salvar"},{.T.,"Cancelar"},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil}}
 
-If MsgYesNo("Origem")
-	FWExecView('SOLICITAÇÃO DE RECURSOS - ORIGEM',"FBPCOA11", 3,, { || .T. } )//, , ,aButtons )
-Else
 	FWExecView('SOLICITAÇÃO DE RECURSOS',"FBPCOA12", 3,, { || .T. } )//, , ,aButtons )
-ENDIF
+//If MsgYesNo("Origem")
+//	FWExecView('SOLICITAÇÃO DE RECURSOS - ORIGEM',"FBPCOA11", 3,, { || .T. } )//, , ,aButtons )
+//Else
+//ENDIF
 Return NIL
 
 
