@@ -60,7 +60,8 @@ Static Function ModelDef()
 	Local oStruZZ5 := FWFormStruct( 1, 'ZZ5' )
 	Local oStruZZ6 := FWFormStruct( 1, 'ZZ6' )
     Local oStruZZ62 := FWFormStruct( 1, 'ZZ6' )
-	Local oModel   := MPFormModel():New('TINCM001',/* { |oModel|GatZZ6()}*/, { |oModel| TINCA01POS(oModel)})
+    // MPFORMMODEL():New(< cID >, < bPre >, < bPost >, < bCommit >, < bCancel >)-> NIL
+	Local oModel   := MPFormModel():New('TINCM001',/* { |oModel|GatZZ6()}*/, { |oModel| TINCA01POS(oModel)}, { |oModel| TINCA01GRV(oModel)})
     Local oCommit  := TINCA001EV():New()
 	/*
  aAux := {} 
@@ -267,6 +268,51 @@ Static Function TINCA01POS(oModel)
     EndIf
 */
 Return Empty(cError)
+
+//-----------------------------------------------------------------------------
+/*/ {Protheus.doc} Function
+Validacao
+
+@author  	Wagner Mobile Costa
+@version 	P12
+@since   	18/11/2020
+@return 	oModel
+/*/
+//-----------------------------------------------------------------------------
+Static Function TINCA01GRV(oModel)
+    Local nPos   := 0
+    Local nModel := 0
+    Local oZZ6
+    Local oZZ5
+
+	If oModel == Nil
+		Return .F.
+	EndIf
+
+    oZZ5 := oModel:GetModel('ZZ5MASTER')
+
+    ZZ5->(RecLock("ZZ5", .T.))
+    ZZ5->ZZ5_FILIAL := xFilial('ZZ5')
+    ZZ5->ZZ5_DOC    := oZZ5:GetValue('ZZ5_DOC')
+    ZZ5->ZZ5_USER   := oZZ5:GetValue('ZZ5_USER')
+    
+    For nModel := 1 To 2
+        oZZ6 := oModel:GetModel('ZZ6DETAIL')
+        If nModel == 2
+            oZZ6 := oModel:GetModel('ZZ62DETAIL')
+        EndIf
+        For nPos := 1 To oZZ6:Length()
+            oZZ6:GoLine(nPos)
+
+            ZZ6->(RecLock("ZZ6", .T.))
+            ZZ6->ZZ6_FILIAL := xFilial('ZZ6')
+            ZZ6->ZZ6_DOC    := oZZ6:GetValue('ZZ6_DOC')
+            ZZ6->ZZ6_TIPO   := oZZ6:GetValue('ZZ6_TIPO')
+            ZZ6->ZZ6_DATA   := oZZ6:GetValue('ZZ6_DATA')
+        Next
+    Next
+
+Return .T.
 
 
 //-----------------------------------------------------------------------------
