@@ -10,10 +10,12 @@ Cadastro das incorporações a serem executadas
 @Parametros:
 /*/
 //-----------------------------------------------------------------------------
+
 User Function TINCA001()
 	Local oBrowse
 	Local aArea	:= GetArea()
- 
+    Private oClone := Nil
+
 	DbSelectArea("ZZ5")
 
 	oBrowse := FWMBrowse():New()
@@ -61,8 +63,8 @@ Static Function ModelDef()
 	Local oStruZZ6 := FWFormStruct( 1, 'ZZ6' )
     Local oStruZZ62 := FWFormStruct( 1, 'ZZ6' )
     // MPFORMMODEL():New(< cID >, < bPre >, < bPost >, < bCommit >, < bCancel >)-> NIL
-	Local oModel   := MPFormModel():New('TINCM001',/* { |oModel|GatZZ6()}*/, { |oModel| TINCA01POS(oModel)}, { |oModel| TINCA01GRV(oModel)})
-    Local oCommit  := TINCA001EV():New()
+	Local oModel   := MPFormModel():New('TINCM001', { |oModel|GatZZ6()}, /*{ |oModel| TINCA01POS(oModel)}*/, { |oModel| TINCA01GRV(oModel)})
+    
 	/*
  aAux := {} 
  aAux := FWStruTrigger('ZZ5_DOC','ZZ6_DOC','GatZZ6(M->ZZ5_DOC)',.F.) 
@@ -71,27 +73,29 @@ Static Function ModelDef()
  // //oStruct:AddTrigger("Campo Origem", "Campo Destino", "Bloco de código na validação da execução do gatilho", "Bloco de código na execução do gatilho")
 
 	oModel:AddFields( 'ZZ5MASTER',, oStruZZ5)
-	oModel:SetDescription("DESTINO")
+	oModel:SetDescription("DSOLICITAÇÃO DE RECURSOS - DESTINO")
 	oModel:SetPrimaryKey( {} )
 
 	oModel:AddGrid('ZZ6DETAIL', 'ZZ5MASTER', oStruZZ6,;
-                { |oModelGrid, nLine ,cAction,cField| VldGrid(oModelGrid, nLine, cAction, cField) })
+                { |oModelZZ6, nLine ,cAction,cField| VldGrid6(oModelZZ6, nLine, cAction, cField) })
 
-	oModel:AddGrid('ZZ62DETAIL', 'ZZ6DETAIL', oStruZZ6,;
-                { |oModelGrid, nLine ,cAction,cField| VldGrid(oModelGrid, nLine, cAction, cField) })
+	oModel:AddGrid('ZZ62DETAIL', 'ZZ6DETAIL', oStruZZ62,;
+                { |oModelZZ62, nLine ,cAction,cField| VldGrid62(oModelZZ62, nLine, cAction, cField) })
 
-	oModel:GetModel('ZZ6DETAIL'):SetUniqueLine({"ZZ6_DOC"})
-    oModel:GetModel('ZZ62DETAIL'):SetUniqueLine({"ZZ6_DOC"})
-	oModel:SetRelation('ZZ6DETAIL', { { 'ZZ6_FILIAL', 'xFilial("ZZ6")' },;
+	//oModel:GetModel('ZZ6DETAIL'):SetUniqueLine({"ZZ6_DOC"})
+    //oModel:GetModel('ZZ62DETAIL'):SetUniqueLine({"ZZ6_DOC"})
+	
+    oModel:SetRelation('ZZ6DETAIL', { { 'ZZ6_FILIAL', 'xFilial("ZZ6")' },;
 									  { 'ZZ6_DOC', 'ZZ5_DOC'  } },; 
-		                              ZZ6->(IndexKey(1)) )
-	    
-        	oModel:SetRelation('ZZ62DETAIL', { { 'ZZ6_FILIAL', 'xFilial("ZZ6")' },;
+		                              ZZ6->(IndexKey(3)) )
+
+	oModel:SetRelation('ZZ62DETAIL', { { 'ZZ6_FILIAL', 'xFilial("ZZ6")' },;
 									  { 'ZZ6_DOC', 'ZZ5_DOC'  } },; 
-		                              ZZ6->(IndexKey(1)) )
+		                              ZZ6->(IndexKey(3)) )
+
     oModel:GetModel('ZZ5MASTER'):SetDescription("SOLICITAÇÃO DE RECURSOS")
-	oModel:GetModel('ZZ6DETAIL'):SetDescription("DESTINO - CREDITO")
-    oModel:GetModel('ZZ62DETAIL'):SetDescription("ORIGEM - DEBITO")
+	oModel:GetModel('ZZ6DETAIL'):SetDescription("DESTINO DOS RECURSOS")
+    oModel:GetModel('ZZ62DETAIL'):SetDescription("ORIGEM DOS RECURSOS")
  //   oModel:InstallEvent("TINCA001EV", /*cOwner*/, oCommit)
 
  Return oModel
@@ -111,7 +115,7 @@ Static Function ViewDef()
 	Local oModel  := FWLoadModel("TINCA001")
     Local oStruZZ5 := FWFormStruct(2, 'ZZ5')
     Local oStruZZ6 := FWFormStruct(2, 'ZZ6')
-        Local oStruZZ62 := FWFormStruct(2, 'ZZ6')
+    Local oStruZZ62 := FWFormStruct(2, 'ZZ6')
 	Local oView
 
    // oStruZZ6:RemoveField('ZZ6_IDPROC')
@@ -119,21 +123,23 @@ Static Function ViewDef()
 	oView:SetModel(oModel)
 	oView:AddField('VIEW_ZZ5', oStruZZ5, 'ZZ5MASTER')
 
-	oView:CreateHorizontalBox('SUPERIOR', 30)
-	oView:CreateHorizontalBox('INFERIOR', 50)
-	oView:CreateHorizontalBox('BAIXO', 20)
+	oView:CreateHorizontalBox('SUPERIOR', 15)
+	oView:CreateHorizontalBox('INFERIOR', 60)
+	oView:CreateHorizontalBox('BAIXO', 25)
 
 	OView:SetOwnerView('VIEW_ZZ5', 'SUPERIOR')
 
 	oView:AddGrid('VIEW_ZZ6', oStruZZ6, 'ZZ6DETAIL')
-
+oStruZZ6:RemoveField('ZZ6_DOC')
+oStruZZ6:RemoveField('ZZ6_TIPO')
 	OView:SetOwnerView('VIEW_ZZ6', 'INFERIOR')
-	OView:EnableTitleView('VIEW_ZZ6', 'ORIGEM - DEBITO')
+	OView:EnableTitleView('VIEW_ZZ6', 'ORIGEM DOS RECURSOS')
 
 	oView:AddGrid('VIEW_ZZ62', oStruZZ62, 'ZZ62DETAIL')
     OView:SetOwnerView('VIEW_ZZ62', 'BAIXO')
-	OView:EnableTitleView('VIEW_ZZ62', 'DESTINO - CREDITO')
-
+	OView:EnableTitleView('VIEW_ZZ62', 'DESTINO DOS RECURSOS')
+oStruZZ62:RemoveField('ZZ6_DOC')
+oStruZZ62:RemoveField('ZZ6_TIPO')
 	//oView:SetViewCanActivate({|oView| VldView(oView)})
     
 	//oView:AddUserButton( 'Registros Incorporação', 'CLIPS', {|oView| U_TINCMON(oView)} )
@@ -183,25 +189,99 @@ Validacao ação do GRID
 @since   	25/01/2021
 /*/
 //-----------------------------------------------------------------------------
-Static Function VldGrid(oModelGrid, nLine, cAction, cField)
+Static Function VldGrid6(oModelZZ6, nLine, cAction, cField)
 
 Local lRet := .T.
 Local cMsg := ""
  
-If  (cAction == "DELETE" .Or. cAction == "CANSETVALUE") .And.;
-    (oModelGrid:GetValue("ZZ6_TIPO") == "C")
+ 
+nOperation := oModelZZ6:GetOperation() 
+
+If  (nOperation == MODEL_OPERATION_INSERT) 
+   If nLine > 1
+       oModelZZ62 := oClone  
+        oModelZZ62:GetValue("ZZ6_TIPO") := "C"
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oModelZZ6:GetValue("ZZ6_FILIAL")
+        oModelZZ62:GetValue("ZZ6_DOC") := oModelZZ6:GetValue("ZZ6_DOC")
+        oModelZZ62:GetValue("ZZ6_DATA") := oModelZZ6:GetValue("ZZ6_DATA")
+        oModelZZ62:GetValue("ZZ6_CO") := oModelZZ6:GetValue("ZZ6_CO")
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oModelZZ6:GetValue("ZZ6_CLASSE")
+        oModelZZ62:GetValue("ZZ6_CC") := oModelZZ6:GetValue("ZZ6_CC")
+        
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oModelZZ62:ADATAMODEL[1][1][1][1]
+        oModelZZ62:GetValue("ZZ6_DOC") := oModelZZ62:ADATAMODEL[1][1][1][2]
+        oModelZZ62:GetValue("ZZ6_TIPO") := oModelZZ62:ADATAMODEL[1][1][1][3]
+        oModelZZ62:GetValue("ZZ6_DATA") := oModelZZ62:ADATAMODEL[1][1][1][4]
+        oModelZZ62:GetValue("ZZ6_CO") := oModelZZ62:ADATAMODEL[1][1][1][5]
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oModelZZ62:ADATAMODEL[1][1][1][6]
+    EndIf
+    
+EndIf
+
+If  (cAction == "DELETE") //;.Or. cAction == "CANSETVALUE") .And.;
+    //(oModelGrid:GetValue("ZZ6_TIPO") == "C")
     lRet := .F.
     If cAction == "DELETE"
         cMsg := "Carga de Registros já realizada"
-        If oModelGrid:GetValue("ZZ6_TIPO") == "D"
+        If oModelZZ6:GetValue("ZZ6_TIPO") == "D"
             cMsg := "Execução já iniciada"
         EndIF
-        cMsg := "Rotina: " + oModelGrid:GetValue("ZZ6_DOC") + "-" + cMsg + " a exclusão não pode ser realizada !"
+        cMsg := "Rotina: " + oModelZZ6:GetValue("ZZ6_DOC") + "-" + cMsg + " a exclusão não pode ser realizada !"
         Help(,, "PCO JA INSERIDO",, cMsg, 1, 0) 
     EndIf
 EndIf
+/*
+If  (cAction == "INSERT") 
+
+oModelGrid:GetValue("ZZ6_TIPO")
+EndIf
 */
 Return lRet
+
+
+
+
+Static Function VldGrid62(oModelZZ62, nLine, cAction, cField)
+Local lRet := .T.
+Local aAreaZZ62 := GetArea("ZZ6")
+Local aCopiaZZ62 := {}
+
+nOperation := oModelZZ62:GetOperation() 
+
+If  (nOperation == MODEL_OPERATION_INSERT) 
+    If nLine > 1
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oClone:GetValue("ZZ5_FILIAL")
+        oModelZZ62:GetValue("ZZ6_DOC") := oClone:GetValue("ZZ5_DOC")
+        oModelZZ62:GetValue("ZZ6_DATA") := oClone:GetValue("ZZ6_DATA")
+        oModelZZ62:GetValue("ZZ6_CO") := oClone:GetValue("ZZ6_CO")
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oClone:GetValue("ZZ6_CLASSE")
+        oModelZZ62:GetValue("ZZ6_CC") := oClone:GetValue("ZZ6_CC")
+
+    Else
+        oModelZZ62:GetValue("ZZ6_TIPO") := "C"
+        /*oModelZZ62:GetValue("ZZ6_FILIAL") := oModelZZ6:GetValue("ZZ5_FILIAL")
+        oModelZZ62:GetValue("ZZ6_DOC") := oModelZZ6:GetValue("ZZ5_DOC")
+        oModelZZ62:GetValue("ZZ6_DATA") := oModelZZ6:GetValue("ZZ6_DATA")
+        oModelZZ62:GetValue("ZZ6_CO") := oModelZZ6:GetValue("ZZ6_CO")
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oModelZZ6:GetValue("ZZ6_CLASSE")
+        oModelZZ62:GetValue("ZZ6_CC") := oModelZZ6:GetValue("ZZ6_CC")*/
+        
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oModelZZ62:ADATAMODEL[1][1][1][1]
+        oModelZZ62:GetValue("ZZ6_DOC") := oModelZZ62:ADATAMODEL[1][1][1][2]
+        oModelZZ62:GetValue("ZZ6_TIPO") := oModelZZ62:ADATAMODEL[1][1][1][3]
+        oModelZZ62:GetValue("ZZ6_DATA") := oModelZZ62:ADATAMODEL[1][1][1][4]
+        oModelZZ62:GetValue("ZZ6_CO") := oModelZZ62:ADATAMODEL[1][1][1][5]
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oModelZZ62:ADATAMODEL[1][1][1][6]
+    EndIf
+    oClone := oModelZZ62
+
+EndIf
+
+RestArea(aAreaZZ62)
+Return .T.
+
+
+
 
 //-----------------------------------------------------------------------------
 /*/ {Protheus.doc} Function
@@ -295,25 +375,33 @@ Static Function TINCA01GRV(oModel)
     ZZ5->ZZ5_FILIAL := xFilial('ZZ5')
     ZZ5->ZZ5_DOC    := oZZ5:GetValue('ZZ5_DOC')
     ZZ5->ZZ5_USER   := oZZ5:GetValue('ZZ5_USER')
-    
+    ZZ5->ZZ5_NUSER	:= oZZ5:GetValue('ZZ5_NUSER')
+    ZZ5->ZZ5_DATA 	:= oZZ5:GetValue('ZZ5_DATA')
+    ZZ5->ZZ5_HORA 	:= oZZ5:GetValue('ZZ5_HORA')  
+    ZZ5->(MsUnlock())
+
     For nModel := 1 To 2
         oZZ6 := oModel:GetModel('ZZ6DETAIL')
         If nModel == 2
             oZZ6 := oModel:GetModel('ZZ62DETAIL')
+            //ZZ6->(RecLock("ZZ6", .F.))
+        //Else    
+            //ZZ6->(RecLock("ZZ6", .T.))
         EndIf
         For nPos := 1 To oZZ6:Length()
             oZZ6:GoLine(nPos)
-
             ZZ6->(RecLock("ZZ6", .T.))
             ZZ6->ZZ6_FILIAL := xFilial('ZZ6')
-            ZZ6->ZZ6_DOC    := oZZ6:GetValue('ZZ6_DOC')
-            ZZ6->ZZ6_TIPO   := oZZ6:GetValue('ZZ6_TIPO')
+            ZZ6->ZZ6_DOC    := oZZ5:GetValue('ZZ5_DOC')
+            ZZ6->ZZ6_TIPO   := iIf(nModel==2,"C","D") //oZZ6:GetValue('ZZ6_TIPO')
             ZZ6->ZZ6_DATA   := oZZ6:GetValue('ZZ6_DATA')
+            ZZ6->ZZ6_CLASSE := oZZ6:GetValue('ZZ6_CLASSE')
+            ZZ6->ZZ6_CO		:= oZZ6:GetValue('ZZ6_CO')
+            ZZ6->(MsUnlock())
         Next
     Next
 
 Return .T.
-
 
 //-----------------------------------------------------------------------------
 /*/ {Protheus.doc} Function
@@ -944,7 +1032,67 @@ Local lRet := .T.
 Local oModel := FWModelActive()
 Local cDesc := oModel:GetValue('ZZ5MASTER','ZZ5_DOC')
 
-oModel:SetValue('ZZ6DETAIL','ZZ6_DOC',cDesc)
-oModel:SetValue('ZZ62DETAIL','ZZ6_DOC',cDesc)
 
+	Local cError	 := ""
+    Local nOperation := 0
+    Local cFilOri    := ""
+    Local cFilDes    := ""
+    Local nPos       := 0
+    Local oZZ6
+    Local oZZ5
+    Local cRet      := ""
+    Local cID       := ""
+    Local cIDDescr  := ""
+
+	If oModel == Nil
+		Return .F.
+	EndIf
+
+	nOperation := oModel:GetOperation()
+
+    oZZ5 := oModel:GetModel('ZZ5MASTER')
+
+    cFilOri    := oZZ5:GetValue('ZZ5_FILIAL')
+    cID        := oZZ5:GetValue('ZZ5_DOC')
+    cIDDescr   := oZZ5:GetValue('ZZ5_USER')
+        cdATA   := oZZ5:GetValue('ZZ5_DATA')
+    oZZ6 := oModel:GetModel('ZZ6DETAIL')
+ /*   For nPos := 1 To oZZ6:Length()
+        oZZ6:GoLine(nPos)
+        If nOperation == MODEL_OPERATION_INSERT
+            oModel:SetValue('ZZ6DETAIL','ZZ6_DOC',cDesc)
+            //oModel:SetValue('ZZ62DETAIL','ZZ6_DOC',cDesc)
+            //oModel:SetValue('ZZ62DETAIL','ZZ6_DATA',cdATA)
+        EndIf
+ /*       If nOperation == MODEL_OPERATION_DELETE
+            If oZZ6:GetValue("ZZ6_STEXEC") <> "1"
+                cError := "A rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] já teve o status de execução iniciado. Processo não pode ser excluido !"
+                Exit
+            EndIF
+        Else
+            If ! FindFunction(oZZ6:GetValue("ZZ6_FUNLOG"))
+                cError := "A função [" + oZZ6:GetValue("ZZ6_FUNLOG") + "] informada para rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] não está compilada no repositorio !"
+                Exit
+            EndIF
+
+            If ! FindFunction(oZZ6:GetValue("ZZ6_FUNPRO"))
+                cError := "A função [" + oZZ6:GetValue("ZZ6_FUNPRO") + "] informada para rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] não está compilada no repositorio !"
+                Exit
+            EndIF
+        EndIf
+    Next
+*/
+ /*   If ! Empty(cError)
+        Help(,, "Incorporador",, cError, 1, 0) 
+    Else
+        cRet := SendToken(cID,__cUserID,cFilOri,cFilDes,cIDDescr) 
+        If empty(cRet)   
+            Help(,, "Incorporador",, "Problemas no envio de email com o Token.", 1, 0) 
+        Endif
+    EndIf
+*/
+
+
+
+//MPFORMMODEL():AddGrid(< cId >, < cOwner >, < oModelStruct >, < bLinePre >, < bLinePost >, < bPre >, < bPost >, < bLoad
 Return lRet
