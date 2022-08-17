@@ -1,462 +1,558 @@
-#include 'totvs.ch'
-#Include 'FWMVCDef.ch'
+#INCLUDE 'TOTVS.CH'
+#INCLUDE 'FWMVCDEF.CH'
 
-//-------------------------------------------------------------------
-/*/{Protheus.doc} COMP029_MVC
-Tela de consulta MVC
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+Static __aZZ6   := {}
+Static __aZZ62   := {}
 
-@author Ernani Forastieri e Rodrigo Antonio Godinho
-@since 05/10/2009
-@version P10
-/*/
-//-------------------------------------------------------------------
+
 User Function FBPCOA12()
-//Local aButtons := {{.F.,Nil},{.F.,Nil},{.F.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,"Salvar"},{.T.,"Cancelar"},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil},{.T.,Nil}}
-FWExecView('SOLICITAÇÃO DE RECURSOS - DESTINO',"FBPCOA12", 3,, { || .T. } )//, , ,aButtons )
+	Local oBrowse
+	Local aArea	:= GetArea()
+    Private oClone := Nil
+
+	DbSelectArea("ZZ5")
+
+	oBrowse := FWMBrowse():New()
+	oBrowse:SetAlias('ZZ5')
+	oBrowse:SetDescription("SOLICITAÇÃO DE RECURSOS")
+	
+    oBrowse:AddLegend( "ZZ5_STATUS=='1'", "WHITE", "Pendente de Aprovação Gestor (Nível 1)"  ) // Exclui - Altera 
+    oBrowse:AddLegend( "ZZ5_STATUS=='2'", "BLACK", "Pendente de Aprovação Gestor (Nível 2)"  ) // Exclui - Altera
+    oBrowse:AddLegend( "ZZ5_STATUS=='3'", "YELLOW","Pendente de Aprovação Controladoria (Faixa de Valor / Grupo de Contas)"  ) // Exclui - Altera
+    oBrowse:AddLegend( "ZZ5_STATUS=='4'", "BLUE" , "Pendente de Aprovação Controladoria (Grupo de Contas)"  ) // Exclui - Altera
+
+    oBrowse:AddLegend( "ZZ5_STATUS=='5'", "PINK", "Pendente Controladoria"  )
+    oBrowse:AddLegend( "ZZ5_STATUS=='6'", "RED","Solicitação Rejeitada"  )
+    oBrowse:AddLegend( "ZZ5_STATUS=='7'", "GREEN" , "Solicitação Aprovada"  )
+
+    oBrowse:DisableDetails()
+	oBrowse:Activate()
+
+	RestArea(aArea)
+
 Return NIL
 
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+Static Function MenuDef()
+	Local aRotina := {}
+
+     ADD OPTION aRotina TITLE 'Incluir Origem'          ACTION 'VIEWDEF.TINCA001' OPERATION MODEL_OPERATION_INSERT   ACCESS 0 //OPERATION 1
+    ADD OPTION aRotina TITLE 'Incluir Destino'         ACTION 'VIEWDEF.FBPCOA12' OPERATION MODEL_OPERATION_INSERT   ACCESS 0 //OPERATION 1
+
+    //ADD OPTION aRotina TITLE "Pesquisar"	   ACTION "PesqBrw"          OPERATION 1 ACCESS 0
+    ADD OPTION aRotina TITLE "Visualizar" 	   ACTION "VIEWDEF.TINCA001" OPERATION 2 ACCESS 0
+    //ADD OPTION aRotina TITLE "Incluir"    	   ACTION "VIEWDEF.TINCA001" OPERATION 3 ACCESS 0
+    ADD OPTION aRotina TITLE 'Excluir'         ACTION 'VIEWDEF.TINCA001' OPERATION MODEL_OPERATION_DELETE ACCESS 0 //OPERATION 5
+    ADD OPTION aRotina TITLE 'Aprovação'       ACTION 'u_AprovPCO()' OPERATION MODEL_OPERATION_INSERT  ACCESS 0 //OPERATION 1
+  
+Return aRotina
+
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 Static Function ModelDef()
-// Cria a estrutura a ser usada no Modelo de Dados
-Local oStruPar := FWFormModelStruct():New()
-Local oStruZZ5 := FWFormStruct( 1, 'ZZ5' , { |x| ALLTRIM(x) $ 'ZZ5_FILIAL, ZZ5_DOC, ZZ5_STATUS, ZZ5_USER, ZZ5_NUSER, ZZ5_DATA, ZZ5_HORA'        } )
-Local oStruZZ6 := FWFormStruct( 1, 'ZZ6' , { |x| ALLTRIM(x) $ 'ZZ6_FILIAL,ZZ6_DOC,ZZ6_TIPO,ZZ6_DATA,ZZ6_CO,ZZ6_CLASSE,ZZ6_OPERAC,ZZ6_CC,ZZ6_ITCTA,ZZ6_CLVAL,ZZ6_VALOR,ZZ6_HIST,ZZ6_USRAP1,ZZ6_NUSAP1,ZZ6_STAT1,ZZ6_DTAP1,ZZ6_HRAP1, ZZ6_USRAP2,ZZ6_NUSAP2,ZZ6_STAT2,ZZ6_DTAP2,ZZ6_HRAP2,ZZ6_USRCTA,ZZ6_NUSCTA,ZZ6_STATCT,ZZ6_DTCTA,ZZ6_HRCTA' } )
-Local oStruZZ62 := FWFormStruct( 1, 'ZZ6' , { |x| ALLTRIM(x) $ 'ZZ6_FILIAL,ZZ6_DOC,ZZ6_TIPO,ZZ6_DATA,ZZ6_CO,ZZ6_CLASSE,ZZ6_OPERAC,ZZ6_CC,ZZ6_ITCTA,ZZ6_CLVAL,ZZ6_VALOR,ZZ6_HIST,ZZ6_USRAP1,ZZ6_NUSAP1,ZZ6_STAT1,ZZ6_DTAP1,ZZ6_HRAP1, ZZ6_USRAP2,ZZ6_NUSAP2,ZZ6_STAT2,ZZ6_DTAP2,ZZ6_HRAP2,ZZ6_USRCTA,ZZ6_NUSCTA,ZZ6_STATCT,ZZ6_DTCTA,ZZ6_HRCTA' } )
-//Local oModel
-Local cIdPonto := ""
-Local cIdModel := ""
+	Local oStruZZ5 := FWFormStruct( 1, 'ZZ5' )
+	Local oStruZZ62 := FWFormStruct( 1, 'ZZ6' )
+    Local oStruZZ6 := FWFormStruct( 1, 'ZZ6' )
+    // MPFORMMODEL():New(< cID >, < bPre >, < bPost >, < bCommit >, < bCancel >)-> NIL
+	Local oModel   := MPFormModel():New('xFBPCOA12', { |oModel|GatZZ6()}, /*{ |oModel| TINCA01POS(oModel)}*/, { |oModel| TINCA01GRV(oModel)})
+    
+	/*
+ aAux := {} 
+ aAux := FWStruTrigger('ZZ5_DOC','ZZ6_DOC','GatZZ6(M->ZZ5_DOC)',.F.) 
+ oStruZA4:AddTrigger(aAux[1],aAux[2],aAux[3],aAux[4]) 
+ */
+ // //oStruct:AddTrigger("Campo Origem", "Campo Destino", "Bloco de código na validação da execução do gatilho", "Bloco de código na execução do gatilho")
 
-Local oModel   := MPFormModel():New('FBPCOA12', , { |oModel| fSave(oModel) })
+	oModel:AddFields( 'ZZ5MASTER',, oStruZZ5)
+	oModel:SetDescription("SOLICITAÇÃO DE RECURSOS - ORIGEM-debito")
+	oModel:SetPrimaryKey( {} )
+/*
+	oModel:AddGrid('ZZ6DETAIL', 'ZZ5MASTER', oStruZZ6,;
+                { |oModelZZ6, nLine ,cAction,cField| VldGrid6(oModelZZ6, nLine, cAction, cField) })
 
-oStruPar:AddField( ;
-"Origem"                       , ;               // [01] Titulo do campo
-"Origem"                       , ;               // [02] ToolTip do campo
-'BOTAO1'                        , ;               // [03] Id do Field
-'BT'                           , ;               // [04] Tipo do campo
-1                              , ;               // [05] Tamanho do campo
-0                              , ;               // [06] Decimal do campo
-{ |oMdl| Origem( oMdl ), .T. }  )               // [07] Code-block de validação do campo
+	oModel:AddGrid('ZZ62DETAIL', 'ZZ6DETAIL', oStruZZ62,;
+                { |oModelZZ62, nLine ,cAction,cField| VldGrid62(oModelZZ62, nLine, cAction, cField) })
+*/
 
-oStruPar:AddField( ;
-"Destino"                     , ;               // [01] Titulo do campo
-"Destino"                     , ;               // [02] ToolTip do campo
-'BOTAO2'                        , ;               // [03] Id do Field
-'BT'                           , ;               // [04] Tipo do campo
-1                              , ;               // [05] Tamanho do campo
-0                              , ;               // [06] Decimal do campo
-{ |oMdl| Destino( oMdl ), .T. }  )               // [07] Code-block de validação do campo
+//    oModel:AddGrid('ZZ6DETAIL','ZZ5MASTER', oStruZZ6 ,,,,, {|oGrid| LeCab(oGrid, 1)}         )
+//    oModel:AddGrid('ZZ62DETAIL','ZZ6DETAIL'  , oStruZZ62 ,,,,, {|oGrid| LeItens(oGrid, oModel, 1 )})
 
-
-oStruZZ5:SetProperty ( 'ZZ5_DOC', MODEL_FIELD_VALID, FWBuildFeature( 1, '.T.' ) )
-oStruZZ5:SetProperty ( 'ZZ5_DOC', MODEL_FIELD_INIT , NIL )
-
-oModel := MPFormModel():New( 'DESTINO' , , { | oMdl | NIL } )
-
-oModel:AddFields( 'PARAMETROS', NIL, oStruPar )
-
-oModel:AddGrid( 'ZZ5DETAIL', 'PARAMETROS', oStruZZ5 )
-oModel:AddGrid( 'ZZ6DETAIL', 'ZZ5DETAIL', oStruZZ6 )
-oModel:AddGrid( 'ZZ62DETAIL', 'ZZ6DETAIL', oStruZZ62 )
-
-oModel:GetModel('ZZ6DETAIL'):SetMaxLine( GetNewPar("MV_COMLMAX", 99) )
-
-//oModel:AddCalc( 'CALCULOS', 'PARAMETROS', 'ZZ5DETAIL', 'ZZ5_DOC', 'ZZ5__TOT01', 'COUNT', { | oFW | TOTAIS( oFW, .T. ) }, , "TOTAL 01" )
-//oModel:AddCalc( 'CALCULOS', 'PARAMETROS', 'ZZ5DETAIL', 'ZZ5_DOC', 'ZZ5__TOT02', 'COUNT', { | oFW | TOTAIS( oFW, .F. ) }, , "TOTAL 02" )
-
-//oModel:SetRelation( 'ZZ5DETAIL', { { 'ZZ5_FILIAL', 'xFilial( "ZZ5" )' } , { 'ZZ6_DOC', 'ZZ5_DOC' } } , ZZ5->( IndexKey( 1 ) ) )
-oModel:SetRelation( 'ZZ6DETAIL', { { 'ZZ6_FILIAL', 'xFilial( "ZZ6" )' } , { 'ZZ6_DOC', 'ZZ5_DOC' } } , ZZ6->( IndexKey( 1 ) ) )
-oModel:SetRelation( 'ZZ62DETAIL', { { 'ZZ6_FILIAL', 'xFilial( "ZZ6" )' } , { 'ZZ6_DOC', 'ZZ5_DOC' } } , ZZ6->( IndexKey( 1 ) ) )
-
-oModel:GetModel( 'ZZ62DETAIL' ):SetUniqueLine( { 'ZZ6_DOC' } )
-
-oModel:SetDescription( 'TIPO DE SOLICITAÇÃO - DESTINO' )
-oModel:GetModel( 'PARAMETROS' ):SetDescription( 'PARAMETROS' )
-oModel:GetModel( 'ZZ5DETAIL' ):SetDescription( 'DESTINO' )
-oModel:GetModel( 'ZZ6DETAIL' ):SetDescription( 'DADOS DO DESTINO'  )
-oModel:GetModel( 'ZZ62DETAIL' ):SetDescription( 'DADOS DA ORIGEM'  )
-
-oModel:SetPrimaryKey( {} )
-
-If cIdPonto == 'FORMPOS'
-    Help(NIL, NIL, "HELP", NIL, "Informe a data", 1, 0, NIL, NIL, NIL, NIL, NIL, {"MENSAGEM"})
-    xRet := .F.
-Endif
-
-Return oModel
+    oModel:AddGrid('ZZ62DETAIL','ZZ5MASTER', oStruZZ62)
+    oModel:AddGrid('ZZ6DETAIL','ZZ5MASTER'  , oStruZZ6)
 
 
-//-------------------------------------------------------------------
+	//oModel:GetModel('ZZ6DETAIL'):SetUniqueLine({"ZZ6_DOC"})
+    //oModel:GetModel('ZZ62DETAIL'):SetUniqueLine({"ZZ6_DOC"})
+
+    oModel:SetRelation('ZZ62DETAIL', { { 'ZZ6_FILIAL', 'xFilial("ZZ6")' },;
+									  { 'ZZ6_DOC', 'ZZ5_DOC'  } ,; 
+                                      { 'ZZ6_TIPO', "'C'"  } },; 
+		                              ZZ6->(IndexKey(3)) )
+
+	oModel:SetRelation('ZZ6DETAIL', { { 'ZZ6_FILIAL', 'xFilial("ZZ6")' },;
+									  { 'ZZ6_DOC', 'ZZ5_DOC'  } ,; 
+                                      { 'ZZ6_TIPO', "'D'"  } },; 
+		                              ZZ6->(IndexKey(3)) )
+
+    oModel:GetModel('ZZ6DETAIL'):SetMaxLine( 1 )
+    oModel:GetModel('ZZ5MASTER'):SetDescription("SOLICITAÇÃO DE RECURSOS")
+	oModel:GetModel('ZZ62DETAIL'):SetDescription("ORIGEM DOS RECURSOS-debito")
+    oModel:GetModel('ZZ6DETAIL'):SetDescription("DESTINO DOS RECURSOS-credito")
+ //   oModel:InstallEvent("TINCA001EV", /*cOwner*/, oCommit)
+
+ Return oModel
+
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 Static Function ViewDef()
-// Cria a estrutura a ser usada na View
-Local oStruPar := FWFormViewStruct():New()
-//Local oStruZZ5 := FWFormStruct( 2, 'ZZ5' , { |x| ALLTRIM(x) $ 'ZZ5_FILIAL, ZZ5_DOC' } )
-//Local oStruZZ6 := FWFormStruct( 2, 'ZZ6' , { |x| ALLTRIM(x) $ 'ZZ5_FILIAL, ZZ6_DOC, ZZ6_TIPO' } )
-Local oStruZZ5 := FWFormStruct( 2, 'ZZ5' , { |x| ALLTRIM(x) $ 'ZZ5_FILIAL, ZZ5_DOC, ZZ5_STATUS, ZZ5_USER, ZZ5_NUSER, ZZ5_DATA, ZZ5_HORA'        } )
-Local oStruZZ6 := FWFormStruct( 2, 'ZZ6' , { |x| ALLTRIM(x) $ 'ZZ6_FILIAL,ZZ6_DOC,ZZ6_TIPO,ZZ6_DATA,ZZ6_CO,ZZ6_CLASSE,ZZ6_OPERAC,ZZ6_CC,ZZ6_ITCTA,ZZ6_CLVAL,ZZ6_VALOR,ZZ6_HIST,ZZ6_USRAP1,ZZ6_NUSAP1,ZZ6_STAT1,ZZ6_DTAP1,ZZ6_HRAP1, ZZ6_USRAP2,ZZ6_NUSAP2,ZZ6_STAT2,ZZ6_DTAP2,ZZ6_HRAP2,ZZ6_USRCTA,ZZ6_NUSCTA,ZZ6_STATCT,ZZ6_DTCTA,ZZ6_HRCTA' } )
-Local oStruZZ62 := FWFormStruct( 2, 'ZZ6' , { |x| ALLTRIM(x) $ 'ZZ6_FILIAL,ZZ6_DOC,ZZ6_TIPO,ZZ6_DATA,ZZ6_CO,ZZ6_CLASSE,ZZ6_OPERAC,ZZ6_CC,ZZ6_ITCTA,ZZ6_CLVAL,ZZ6_VALOR,ZZ6_HIST,ZZ6_USRAP1,ZZ6_NUSAP1,ZZ6_STAT1,ZZ6_DTAP1,ZZ6_HRAP1, ZZ6_USRAP2,ZZ6_NUSAP2,ZZ6_STAT2,ZZ6_DTAP2,ZZ6_HRAP2,ZZ6_USRCTA,ZZ6_NUSCTA,ZZ6_STATCT,ZZ6_DTCTA,ZZ6_HRCTA' } )
 
-// Cria um objeto de Modelo de Dados baseado no ModelDef do fonte informado
-Local oModel   := FWLoadModel( 'FBPCOA12' )
-Local oView
-//Local oCalc1
+	Local oModel  := FWLoadModel("FBPCOA12")
+    Local oStruZZ5 := FWFormStruct(2, 'ZZ5')
+    Local oStruZZ62 := FWFormStruct(2, 'ZZ6')
+    Local oStruZZ6 := FWFormStruct(2, 'ZZ6')
+	Local oView
 
-oStruPar:AddField( ;
-'BOTAO1'          , ;             // [01] Campo
-"ZZ"             , ;             // [02] Ordem
-"Origem"       , ;             // [03] Titulo
-"Origem"       , ;             // [04] Descricao
-NIL              , ;             // [05] Help
-'BT'             )               // [06] Tipo do campo   COMBO, Get ou CHECK
+   // oStruZZ6:RemoveField('ZZ6_IDPROC')
+    oView := FWFormView():New()
+	oView:SetModel(oModel)
+	oView:AddField('VIEW_ZZ5', oStruZZ5, 'ZZ5MASTER')
 
-oStruPar:AddField( ;
-'BOTAO2'          , ;             // [01] Campo
-"ZZ"             , ;             // [02] Ordem
-"Destino"       , ;             // [03] Titulo
-"Destno"       , ;             // [04] Descricao
-NIL              , ;             // [05] Help
-'BT'             )               // [06] Tipo do campo   COMBO, Get ou CHECK
+	oView:CreateHorizontalBox('SUPERIOR', 15)
+	oView:CreateHorizontalBox('INFERIOR', 60)
+	oView:CreateHorizontalBox('BAIXO', 25)
 
-oView := FWFormView():New()
-oView:SetModel( oModel )
-oView:AddField( 'VIEW_PAR' , oStruPar, 'PARAMETROS'   )
-oView:AddGrid(  'VIEW_ZZ5' , oStruZZ5, 'ZZ5DETAIL'    )
-oView:AddGrid(  'VIEW_ZZ6' , oStruZZ6, 'ZZ6DETAIL'    )
-oView:AddGrid(  'VIEW_ZZ62' , oStruZZ62, 'ZZ62DETAIL'    )
+	OView:SetOwnerView('VIEW_ZZ5', 'SUPERIOR')
 
-//oCalc1 := FWCalcStruct( oModel:GetModel( 'CALCULOS') )
-//oView:AddField( 'VIEW_CALC', oCalc1, 'CALCULOS' )
+	oView:AddGrid('VIEW_ZZ62', oStruZZ62, 'ZZ62DETAIL')
+oStruZZ6:RemoveField('ZZ6_DOC')
+oStruZZ6:RemoveField('ZZ6_TIPO')
+	OView:SetOwnerView('VIEW_ZZ62', 'INFERIOR')
+	OView:EnableTitleView('VIEW_ZZ62', 'DESTINO DOS RECURSOS-credito')
 
-oView:CreateHorizontalBox( "BOX1",  00)
-oView:CreateHorizontalBox( "BOX2",  15 )
-oView:CreateHorizontalBox( "BOX3",  65 )
-oView:CreateHorizontalBox( "BOX4",  20 )
-
-oView:SetOwnerView( 'VIEW_PAR' , "BOX1" )
-oView:SetOwnerView( 'VIEW_ZZ5' , "BOX2" )
-//oView:SetOwnerView( 'VIEW_CALC', "BOX3" )
-oView:SetOwnerView( 'VIEW_ZZ6' , "BOX3" )
-oView:SetOwnerView( 'VIEW_ZZ62' , "BOX4" )
-
-//oView:EnableTitleView('VIEW_CALC','TOTAIS')
+	oView:AddGrid('VIEW_ZZ6', oStruZZ6, 'ZZ6DETAIL')
+    OView:SetOwnerView('VIEW_ZZ6', 'BAIXO')
+	OView:EnableTitleView('VIEW_ZZ6', 'ORIGEM DOS RECURSOS-debito')
+oStruZZ62:RemoveField('ZZ6_DOC')
+oStruZZ62:RemoveField('ZZ6_TIPO')
+	//oView:SetViewCanActivate({|oView| VldView(oView)})
+    
+	//oView:AddUserButton( 'Registros Incorporação', 'CLIPS', {|oView| U_TINCMON(oView)} )
 
 Return oView
 
-//-------------------------------------------------------------------
-Static Function Origem( oMdl )
-Local aArea      := GetArea()
-Local cOrigem    := ''
-Local cTmp       := GetNextAlias()
-Local cTmp2      := GetNextAlias()
-Local nLinhaZZ5  := 0
-Local nLinhaZZ6  := 0
-Local oModel     := FWModelActive()
-Local oModelZZ5  := oModel:GetModel( 'ZZ5DETAIL' )
-Local oModelZZ6  := oModel:GetModel( 'ZZ6DETAIL' )
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+Static Function VldView(oView)
 
-cOrigem := M->ZZ5_DOC // oModel:GetValue( 'PARAMETROS', 'BOTAO1' )
+    Local oModel	:= oView:GetModel()
+    Local nOpc	    := oModel:GetOperation()
+    Local oMdlPHG	:= oModel:GetModel("ZZ62DETAIL")
+    Local lSemEdit  := .F.
 
-BeginSql Alias cTmp
-	
-	SELECT ZZ5_FILIAL, ZZ5_DOC, ZZ6_FILIAL, ZZ6_DOC, ZZ6_TIPO
-	FROM %table:ZZ5% ZZ5, %table:ZZ6% ZZ6
-	WHERE ZZ5_FILIAL = %xFilial:ZZ5%
-	AND ZZ6_FILIAL = %xFilial:ZZ6%
-/*	AND ZZ5_DOC = %Exp:cOrigem%
-	AND ZZ6_DOC = ZZ5_DOC
-	AND ZZ5.%NotDel%
-	AND ZZ6.%NotDel%
-*/
-EndSql
-
-nLinhaZZ5 := 1
-
-While !(cTmp)->( EOF() )
-/*	
-	If nLinhaZZ5 > 1
-		If oModelZZ5:AddLine() <> nLinhaZZ5
-			Help( ,, 'HELP',, 'Nao incluiu linha ZZ5' + CRLF + oModel:getErrorMessage()[6], 1, 0)   
-			(cTmp)->( dbSkip() )
-			Loop			
-		EndIf
-	EndIf
-*/	
-	oModelZZ5:SetValue( 'ZZ5_FILIAL',(cTmp)->ZZ5_FILIAL )
-	oModelZZ5:SetValue( 'ZZ5_DOC',(cTmp)->ZZ5_DOC )
-	
-	nLinhaZZ5++
-	
-	cOrigem := (cTmp)->ZZ5_DOC
-	
-	BeginSql Alias cTmp2
-		
-		SELECT ZZ6_FILIAL, ZZ6_DOC, ZZ6_TIPO, *
-		
-		FROM %table:ZZ6% ZZ6
-		
-		WHERE ZZ6_FILIAL = %xFilial:ZZ6%
-		AND ZZ6_TIPO = "D"
-		AND ZZ6.%NotDel%
-		
-	EndSql
-	
-	
-	nLinhaZZ6 := 1
-	
-	While !(cTmp2)->( EOF() )  .AND. 	cOrigem== (cTmp2)->ZZ6_FILIAL   
-	/*	
-		If nLinhaZZ6 > 1
-			If oModelZZ6:AddLine() <> nLinhaZZ6
-				Help( ,, 'HELP',, 'Nao incluiu linha ZZ6' + CRLF + oModel:getErrorMessage()[6], 1, 0)
-				(cTmp2)->( dbSkip() )
-				Loop
-			EndIf
-		EndIf
-	*/	
-		oModelZZ6:SetValue( 'ZZ6_FILIAL',(cTmp2)->ZZ6_FILIAL )
-		oModelZZ6:SetValue( 'ZZ6_DOC', (cTmp2)->ZZ6_DOC )
-		oModelZZ6:SetValue( 'ZZ6_TIPO', (cTmp2)->ZZ6_TIPO )
-		oModelZZ6:SetValue( 'ZZ6_DATA', (cTmp2)->ZZ6_DATA )
-		oModelZZ6:SetValue( 'ZZ6_CO', (cTmp2)->ZZ6_CO )
-		oModelZZ6:SetValue( 'ZZ6_CLASSE', (cTmp2)->ZZ6_CLASSE )
-		oModelZZ6:SetValue( 'ZZ6_OPERAC', (cTmp2)->ZZ6_OPERAC )
-		oModelZZ6:SetValue( 'ZZ6_CC', (cTmp2)->ZZ6_CC )
-		oModelZZ6:SetValue( 'ZZ6_ITCTA', (cTmp2)->ZZ6_ITCTA )
-		oModelZZ6:SetValue( 'ZZ6_CLVAL', (cTmp2)->ZZ6_CLVAL )
-		oModelZZ6:SetValue( 'ZZ6_VALOR', (cTmp2)->ZZ6_VALOR )
-		oModelZZ6:SetValue( 'ZZ6_HIST', (cTmp2)->ZZ6_HIST )
-		oModelZZ6:SetValue( 'ZZ6_USRAP1', (cTmp2)->ZZ6_USRAP1 )
-		oModelZZ6:SetValue( 'ZZ6_NUSAP1', (cTmp2)->ZZ6_NUSAP1 )
-		oModelZZ6:SetValue( 'ZZ6_STAT1', (cTmp2)->ZZ6_STAT1 )
-		oModelZZ6:SetValue( 'ZZ6_DTAP1', (cTmp2)->ZZ6_DTAP1 )
-		oModelZZ6:SetValue( 'ZZ6_HRAP1', (cTmp2)->ZZ6_HRAP1 )
-		oModelZZ6:SetValue( 'ZZ6_USRAP2', (cTmp2)->ZZ6_USRAP2 )
-		oModelZZ6:SetValue( 'ZZ6_NUSAP2', (cTmp2)->ZZ6_NUSAP2 )
-		oModelZZ6:SetValue( 'ZZ6_STAT2', (cTmp2)->ZZ6_STAT2 )
-		oModelZZ6:SetValue( 'ZZ6_DTAP2', (cTmp2)->ZZ6_DTAP2 )
-		oModelZZ6:SetValue( 'ZZ6_HRAP2', (cTmp2)->ZZ6_HRAP2 )
-		oModelZZ6:SetValue( 'ZZ6_USRCTA', (cTmp2)->ZZ6_USRCTA )
-		oModelZZ6:SetValue( 'ZZ6_NUSCTA', (cTmp2)->ZZ6_NUSCTA )
-		oModelZZ6:SetValue( 'ZZ6_STATCT', (cTmp2)->ZZ6_STATCT )
-		oModelZZ6:SetValue( 'ZZ6_DTCTA', (cTmp2)->ZZ6_DTCTA )
-		oModelZZ6:SetValue( 'ZZ6_HRCTA', (cTmp2)->ZZ6_HRCTA )
-
-		nLinhaZZ6++
-		
-		(cTmp2)->( dbSkip() )
-	End
-	
-	(cTmp2)->( dbCloseArea() )
-	
-	(cTmp)->( dbSkip() )
-End
-
-(cTmp)->( dbCloseArea() )
-
-RestArea( aArea )
-
-Return NIL
-
-
-
-//-------------------------------------------------------------------
-Static Function Destino( oMdl )
-Local aArea      := GetArea()
-Local cOrigem    := ''
-Local cTmp       := GetNextAlias()
-Local cTmp2      := GetNextAlias()
-Local nLinhaZZ5  := 0
-Local nLinhaZZ6  := 0
-Local oModel     := FWModelActive()
-Local oModelZZ5  := oModel:GetModel( 'ZZ5DETAIL' )
-Local oModelZZ6  := oModel:GetModel( 'ZZ6DETAIL' )
-
-cOrigem := M->ZZ6_DOC //oModel:GetValue( 'PARAMETROS', 'BOTAO2' )
-
-oModelZZ5:DeActivate( .T. )
-If !oModelZZ5:Activate()
-	Help( ,, 'Help',, 'Restricao de ativacao do Modelo Destino', 1, 0 )
-	Return NIL
-EndIf	
-
-BeginSql Alias cTmp
-	
-	SELECT ZZ5_FILIAL, ZZ5_DOC, ZZ6_FILIAL, ZZ6_DOC, ZZ6_TIPO
-	FROM %table:ZZ5% ZZ5, %table:ZZ6% ZZ6
-	WHERE ZZ5_FILIAL = %xFilial:ZZ5%
-	AND ZZ6_FILIAL = %xFilial:ZZ6%
-	AND ZZ5_DOC = %Exp:cOrigem%
-	AND ZZ6_DOC = ZZ5_DOC
-	AND ZZ5.%NotDel%
-	AND ZZ6.%NotDel%
-	
-EndSql
-
-nLinhaZZ5 := 1
-
-While !(cTmp)->( EOF() )
-	
-	If nLinhaZZ5 > 1
-		If oModelZZ5:AddLine() <> nLinhaZZ5
-			Help( ,, 'HELP',, 'Nao incluiu linha ZZ5 - destino' + CRLF + oModel:getErrorMessage()[6], 1, 0)   
-			(cTmp)->( dbSkip() )
-			Loop			
-		EndIf
-	EndIf
-
-	oModelZZ5:SetValue( 'ZZ5_FILIAL',(cTmp)->ZZ5_FILIAL )
-	oModelZZ5:SetValue( 'ZZ5_DOC',(cTmp)->ZZ5_DOC )
-
-	nLinhaZZ5++
-	
-	cOrigem := (cTmp)->ZZ5_DOC
-	
-	BeginSql Alias cTmp2
-		
-		SELECT ZZ6_FILIAL, ZZ6_DOC, ZZ6_TIPO, *
-		
-		FROM %table:ZZ6% ZZ6
-		
-		WHERE ZZ6_FILIAL = %xFilial:ZZ6%
-		AND ZZ6_TIPO = "C"
-		AND ZZ6.%NotDel%
-		
-	EndSql
-	
-	
-	nLinhaZZ6 := 1
-	
-	While !(cTmp2)->( EOF() )  .AND. 	cOrigem== (cTmp2)->ZZ6_FILIAL   
-		
-		If nLinhaZZ6 > 1
-			If oModelZZ6:AddLine() <> nLinhaZZ6
-				Help( ,, 'HELP',, 'Nao incluiu linha ZZ6 - destino' + CRLF + oModel:getErrorMessage()[6], 1, 0)
-				(cTmp2)->( dbSkip() )
-				Loop
-			EndIf
-		EndIf
-		
-			
-		oModelZZ6:SetValue( 'ZZ6_FILIAL',(cTmp2)->ZZ6_FILIAL )
-		oModelZZ6:SetValue( 'ZZ6_DOC', (cTmp2)->ZZ6_DOC )
-		oModelZZ6:SetValue( 'ZZ6_TIPO', (cTmp2)->ZZ6_TIPO )
-		oModelZZ6:SetValue( 'ZZ6_DATA', (cTmp2)->ZZ6_DATA )
-		oModelZZ6:SetValue( 'ZZ6_CO', (cTmp2)->ZZ6_CO )
-		oModelZZ6:SetValue( 'ZZ6_CLASSE', (cTmp2)->ZZ6_CLASSE )
-		oModelZZ6:SetValue( 'ZZ6_OPERAC', (cTmp2)->ZZ6_OPERAC )
-		oModelZZ6:SetValue( 'ZZ6_CC', (cTmp2)->ZZ6_CC )
-		oModelZZ6:SetValue( 'ZZ6_ITCTA', (cTmp2)->ZZ6_ITCTA )
-		oModelZZ6:SetValue( 'ZZ6_CLVAL', (cTmp2)->ZZ6_CLVAL )
-		oModelZZ6:SetValue( 'ZZ6_VALOR', (cTmp2)->ZZ6_VALOR )
-		oModelZZ6:SetValue( 'ZZ6_HIST', (cTmp2)->ZZ6_HIST )
-		oModelZZ6:SetValue( 'ZZ6_USRAP1', (cTmp2)->ZZ6_USRAP1 )
-		oModelZZ6:SetValue( 'ZZ6_NUSAP1', (cTmp2)->ZZ6_NUSAP1 )
-		oModelZZ6:SetValue( 'ZZ6_STAT1', (cTmp2)->ZZ6_STAT1 )
-		oModelZZ6:SetValue( 'ZZ6_DTAP1', (cTmp2)->ZZ6_DTAP1 )
-		oModelZZ6:SetValue( 'ZZ6_HRAP1', (cTmp2)->ZZ6_HRAP1 )
-		oModelZZ6:SetValue( 'ZZ6_USRAP2', (cTmp2)->ZZ6_USRAP2 )
-		oModelZZ6:SetValue( 'ZZ6_NUSAP2', (cTmp2)->ZZ6_NUSAP2 )
-		oModelZZ6:SetValue( 'ZZ6_STAT2', (cTmp2)->ZZ6_STAT2 )
-		oModelZZ6:SetValue( 'ZZ6_DTAP2', (cTmp2)->ZZ6_DTAP2 )
-		oModelZZ6:SetValue( 'ZZ6_HRAP2', (cTmp2)->ZZ6_HRAP2 )
-		oModelZZ6:SetValue( 'ZZ6_USRCTA', (cTmp2)->ZZ6_USRCTA )
-		oModelZZ6:SetValue( 'ZZ6_NUSCTA', (cTmp2)->ZZ6_NUSCTA )
-		oModelZZ6:SetValue( 'ZZ6_STATCT', (cTmp2)->ZZ6_STATCT )
-		oModelZZ6:SetValue( 'ZZ6_DTCTA', (cTmp2)->ZZ6_DTCTA )
-		oModelZZ6:SetValue( 'ZZ6_HRCTA', (cTmp2)->ZZ6_HRCTA )
-		
-		nLinhaZZ6++
-		
-		(cTmp2)->( dbSkip() )
-	End
-	
-	(cTmp2)->( dbCloseArea() )
-	
-	(cTmp)->( dbSkip() )
-End
-
-(cTmp)->( dbCloseArea() )
-
-RestArea( aArea )
-
-Return NIL
-
-
-
-/*/{Protheus.doc} FBPCOA11
-Browse - Itens Solicitação de Recurso
-
-@type User Function
-@author Antonio Nunes
-@since 28/06/2022
-@version 12.1.027
-@return   
-/*/
-/*
-user function FBPCOA11()
-    Local aArea         := GetArea()
-
-    DbSelectArea(AKX)
-    DbSetOrder(1)
-
-    If DbSeek(fwxFilial("AKX") + AKX->AKX_USER )
-        If AKX->AKX_ZZBLQ = "S" 
-            DbSetField(AKX, "AKX_ZZDTBLQ", dDatabase)
-            DbSetField(AKX, "AKX_ZZHRLG", time())
-            DbSetField(AKX, "AKX_ZZUSER", retCodUsr())
-            DbSetField(AKX, "AKX_ZZNMUS", retNomeUsr())
-        End If
+    // Não permite edição caso já iniciou a simulação/execução
+    If nOpc <> MODEL_OPERATION_INSERT
+        ZZ6->(DbSeek(xFilial("ZZ6") + ZZ5->ZZ5_IDPROC))
+        While ZZ6->ZZ6_FILIAL == xFilial("ZZ6") .And. ZZ6->ZZ6_DOC == ZZ5->ZZ5_DOC .And.;
+            ! ZZ6->(Eof())
+           If ZZ6->ZZ6_TIPO == "C"
+                lSemEdit := .T.
+            EndIF
+            ZZ6->(DbSkip())
+        EndDo
     EndIf
     
-    RestArea(aArea)
-    
-Return
-*/
+    oMdlPHG:SetNoInsertLine(lSemEdit)
+    oMdlPHG:SetNoUpdateLine(lSemEdit)
+    oMdlPHG:SetNoDeleteLine(lSemEdit)
 
-static function FBPCOA12POS()
-return ({|| .t.})
+Return .T.
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+Static Function VldGrid6(oModelZZ6, nLine, cAction, cField)
 
-
-
-User Function GatZZ6()
 Local lRet := .T.
-Local oModel := FWModelActive()
-Local cDesc := oModel:GetValue('ZZ5MASTER','ZZ5_DOC')
+Local cMsg := ""
+ 
+ 
+nOperation := oModelZZ6:GetOperation() 
 
-oModel:SetValue('ZZ6MASTER','ZZ6_DOC',cDesc)
+If  (nOperation == MODEL_OPERATION_INSERT) 
+   If nLine > 1
+       oModelZZ62 := oClone  
+        oModelZZ62:GetValue("ZZ6_TIPO") := "C"
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oModelZZ6:GetValue("ZZ6_FILIAL")
+        oModelZZ62:GetValue("ZZ6_DOC") := oModelZZ6:GetValue("ZZ6_DOC")
+        oModelZZ62:GetValue("ZZ6_DATA") := oModelZZ6:GetValue("ZZ6_DATA")
+        oModelZZ62:GetValue("ZZ6_CO") := oModelZZ6:GetValue("ZZ6_CO")
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oModelZZ6:GetValue("ZZ6_CLASSE")
+        oModelZZ62:GetValue("ZZ6_CC") := oModelZZ6:GetValue("ZZ6_CC")
+        
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oModelZZ62:ADATAMODEL[1][1][1][1]
+        oModelZZ62:GetValue("ZZ6_DOC") := oModelZZ62:ADATAMODEL[1][1][1][2]
+        oModelZZ62:GetValue("ZZ6_TIPO") := oModelZZ62:ADATAMODEL[1][1][1][3]
+        oModelZZ62:GetValue("ZZ6_DATA") := oModelZZ62:ADATAMODEL[1][1][1][4]
+        oModelZZ62:GetValue("ZZ6_CO") := oModelZZ62:ADATAMODEL[1][1][1][5]
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oModelZZ62:ADATAMODEL[1][1][1][6]
+    EndIf
+    
+EndIf
+
+If  (cAction == "DELETE") //;.Or. cAction == "CANSETVALUE") .And.;
+    //(oModelGrid:GetValue("ZZ6_TIPO") == "C")
+    lRet := .F.
+    If cAction == "DELETE"
+        cMsg := "Carga de Registros já realizada"
+        If oModelZZ6:GetValue("ZZ6_TIPO") == "D"
+            cMsg := "Tipo DEBITO não pode ser excluído"
+        EndIF
+        cMsg := "Documento: " + oModelZZ6:GetValue("ZZ6_DOC") + "-" + cMsg + " !"
+        Help(,, "PCO JA INSERIDO",, cMsg, 1, 0) 
+    EndIf
+EndIf
 
 Return lRet
 
 
-Static Function fSave(oModel)
+Static Function VldGrid62(oModelZZ62, nLine, cAction, cField)
 Local lRet := .T.
-Local nOpc := oModel:GetOperation()
+Local aAreaZZ62 := GetArea("ZZ6")
+Local aCopiaZZ62 := {}
 
-      lRet := FwFormCommit(oModel)
+nOperation := oModelZZ62:GetOperation() 
 
-      If(nOpc == MODEL_OPERATION_INSERT) .and. (lRet)
+If  (nOperation == MODEL_OPERATION_INSERT) 
+    If nLine > 1
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oClone:GetValue("ZZ5_FILIAL")
+        oModelZZ62:GetValue("ZZ6_DOC") := oClone:GetValue("ZZ5_DOC")
+        oModelZZ62:GetValue("ZZ6_DATA") := oClone:GetValue("ZZ6_DATA")
+        oModelZZ62:GetValue("ZZ6_CO") := oClone:GetValue("ZZ6_CO")
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oClone:GetValue("ZZ6_CLASSE")
+        oModelZZ62:GetValue("ZZ6_CC") := oClone:GetValue("ZZ6_CC")
 
-         //If(lRet .and. ZXR->ZXR_STATUS == '2')
+    Else
+        oModelZZ62:GetValue("ZZ6_TIPO") := "C"
+        
+        oModelZZ62:GetValue("ZZ6_FILIAL") := oModelZZ62:ADATAMODEL[1][1][1][1]
+        oModelZZ62:GetValue("ZZ6_DOC") := oModelZZ62:ADATAMODEL[1][1][1][2]
+        oModelZZ62:GetValue("ZZ6_TIPO") := oModelZZ62:ADATAMODEL[1][1][1][3]
+        oModelZZ62:GetValue("ZZ6_DATA") := oModelZZ62:ADATAMODEL[1][1][1][4]
+        oModelZZ62:GetValue("ZZ6_CO") := oModelZZ62:ADATAMODEL[1][1][1][5]
+        oModelZZ62:GetValue("ZZ6_CLASSE") := oModelZZ62:ADATAMODEL[1][1][1][6]
+    EndIf
+    oClone := oModelZZ62
 
-            RecLock('ZZ5',.T.)
-               ZZ5->ZZ5_FILIAL  := M->ZZ5_FILIAL
-               ZZ5->ZZ5_DOC 	:= M->ZZ5_USER
-			   ZZ5->ZZ5_DOC		:= M->ZZ5_NUSER
-			   ZZ5->ZZ5_DOC 	:= M->ZZ5_DATA
-			   ZZ5->ZZ5_DOC 	:= M->ZZ5_HORA
-            ZZ5->(MsUnlock())
+EndIf
 
-            RecLock('ZZ6',.T.)
-               ZZ6->ZZ6_FILIAL  := M-ZZ6_FILIAL
-               ZZ6->ZZ6_DOC 	:= M->ZZ6_DOC
-			   ZZ6->ZZ6_TIPO	:= M->ZZ6_TIPO
-			   ZZ6->ZZ6_DATA 	:= M->ZZ6_DATA
-			   ZZ6->ZZ6_CLASSE 	:= M->ZZ6_CLASSE
-			   ZZ6->ZZ6_CO		:= M->ZZ6_CO
+RestArea(aAreaZZ62)
+Return .T.
+
+
+
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+Static Function TINCA01POS(oModel)
+	Local cError	 := ""
+    Local nOperation := 0
+    Local cFilOri    := ""
+    Local cFilDes    := ""
+    Local nPos       := 0
+    Local oZZ62
+    Local oZZ5
+    Local cRet      := ""
+    Local cID       := ""
+    Local cIDDescr  := ""
+
+	If oModel == Nil
+		Return .F.
+	EndIf
+
+	nOperation := oModel:GetOperation()
+
+    oZZ5 := oModel:GetModel('ZZ5MASTER')
+
+    cFilOri    := oZZ5:GetValue('ZZ5_FILIAL')
+    cID        := oZZ5:GetValue('ZZ5_DOC')
+    cIDDescr   := oZZ5:GetValue('ZZ5_USER')
+    
+    oZZ62 := oModel:GetModel('ZZ62DETAIL')
+    For nPos := 1 To oZZ62:Length()
+        oZZ62:GoLine(nPos)
+ /*       If nOperation == MODEL_OPERATION_DELETE
+            If oZZ6:GetValue("ZZ6_STEXEC") <> "1"
+                cError := "A rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] já teve o status de execução iniciado. Processo não pode ser excluido !"
+                Exit
+            EndIF
+        Else
+            If ! FindFunction(oZZ6:GetValue("ZZ6_FUNLOG"))
+                cError := "A função [" + oZZ6:GetValue("ZZ6_FUNLOG") + "] informada para rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] não está compilada no repositorio !"
+                Exit
+            EndIF
+
+            If ! FindFunction(oZZ6:GetValue("ZZ6_FUNPRO"))
+                cError := "A função [" + oZZ6:GetValue("ZZ6_FUNPRO") + "] informada para rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] não está compilada no repositorio !"
+                Exit
+            EndIF
+        EndIf
+    */Next
+
+Return Empty(cError)
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+Static Function TINCA01GRV(oModel)
+    Local nPos   := 0
+    Local nModel := 0
+    Local oZZ62
+    Local oZZ5
+
+	If oModel == Nil
+		Return .F.
+	EndIf
+
+    oZZ5 := oModel:GetModel('ZZ5MASTER')
+
+    ZZ5->(RecLock("ZZ5", .T.))
+    ZZ5->ZZ5_FILIAL := xFilial('ZZ5')
+    ZZ5->ZZ5_DOC    := oZZ5:GetValue('ZZ5_DOC')
+    ZZ5->ZZ5_USER   := oZZ5:GetValue('ZZ5_USER')
+    ZZ5->ZZ5_NUSER	:= oZZ5:GetValue('ZZ5_NUSER')
+    ZZ5->ZZ5_DATA 	:= oZZ5:GetValue('ZZ5_DATA')
+    ZZ5->ZZ5_HORA 	:= oZZ5:GetValue('ZZ5_HORA')  
+    ZZ5->(MsUnlock())
+
+    For nModel := 1 To 2
+        oZZ62 := oModel:GetModel('ZZ62DETAIL')
+        If nModel == 2
+            oZZ62 := oModel:GetModel('ZZ6DETAIL')
+            //ZZ6->(RecLock("ZZ6", .F.))
+        //Else    
+            //ZZ6->(RecLock("ZZ6", .T.))
+        EndIf
+        For nPos := 1 To oZZ62:Length()
+            oZZ62:GoLine(nPos)
+            ZZ6->(RecLock("ZZ6", .T.))
+            ZZ6->ZZ6_FILIAL := xFilial('ZZ6')
+            ZZ6->ZZ6_DOC    := oZZ5:GetValue('ZZ5_DOC')
+            ZZ6->ZZ6_TIPO   := iIf(nModel==2,"D","C") //oZZ6:GetValue('ZZ6_TIPO')
+            ZZ6->ZZ6_DATA   := oZZ62:GetValue('ZZ6_DATA')
+            ZZ6->ZZ6_CLASSE := oZZ62:GetValue('ZZ6_CLASSE')
+            ZZ6->ZZ6_CO		:= oZZ62:GetValue('ZZ6_CO')
             ZZ6->(MsUnlock())
+        Next
+    Next
+
+Return .T.
+
+Static Function GatZZ6(OmODEL)
+Local lRet := .T.
+Local oModel := FWModelActive()
+Local cDesc := oModel:GetValue('ZZ5MASTER','ZZ5_DOC')
 
 
-         //Endif
+	Local cError	 := ""
+    Local nOperation := 0
+    Local cFilOri    := ""
+    Local cFilDes    := ""
+    Local nPos       := 0
+    Local oZZ6
+    Local oZZ5
+    Local cRet      := ""
+    Local cID       := ""
+    Local cIDDescr  := ""
 
-      Endif
+	If oModel == Nil
+		Return .F.
+	EndIf
 
-Return(lRet)
+	nOperation := oModel:GetOperation()
+
+    oZZ5 := oModel:GetModel('ZZ5MASTER')
+
+    cFilOri    := oZZ5:GetValue('ZZ5_FILIAL')
+    cID        := oZZ5:GetValue('ZZ5_DOC')
+    cIDDescr   := oZZ5:GetValue('ZZ5_USER')
+        cdATA   := oZZ5:GetValue('ZZ5_DATA')
+    oZZ6 := oModel:GetModel('ZZ6DETAIL')
+ /*   For nPos := 1 To oZZ6:Length()
+        oZZ6:GoLine(nPos)
+        If nOperation == MODEL_OPERATION_INSERT
+            oModel:SetValue('ZZ6DETAIL','ZZ6_DOC',cDesc)
+            //oModel:SetValue('ZZ62DETAIL','ZZ6_DOC',cDesc)
+            //oModel:SetValue('ZZ62DETAIL','ZZ6_DATA',cdATA)
+        EndIf
+ /*       If nOperation == MODEL_OPERATION_DELETE
+            If oZZ6:GetValue("ZZ6_STEXEC") <> "1"
+                cError := "A rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] já teve o status de execução iniciado. Processo não pode ser excluido !"
+                Exit
+            EndIF
+        Else
+            If ! FindFunction(oZZ6:GetValue("ZZ6_FUNLOG"))
+                cError := "A função [" + oZZ6:GetValue("ZZ6_FUNLOG") + "] informada para rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] não está compilada no repositorio !"
+                Exit
+            EndIF
+
+            If ! FindFunction(oZZ6:GetValue("ZZ6_FUNPRO"))
+                cError := "A função [" + oZZ6:GetValue("ZZ6_FUNPRO") + "] informada para rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] não está compilada no repositorio !"
+                Exit
+            EndIF
+        EndIf
+    Next
+*/
+ /*   If ! Empty(cError)
+        Help(,, "Incorporador",, cError, 1, 0) 
+    Else
+        cRet := SendToken(cID,__cUserID,cFilOri,cFilDes,cIDDescr) 
+        If empty(cRet)   
+            Help(,, "Incorporador",, "Problemas no envio de email com o Token.", 1, 0) 
+        Endif
+    EndIf
+*/
+
+
+
+//MPFORMMODEL():AddGrid(< cId >, < cOwner >, < oModelStruct >, < bLinePre >, < bLinePost >, < bPre >, < bPost >, < bLoad
+Return lRet
+
+
+
+Static Function LeCab(oGrid, nFolder)
+    Local aRet      := {}
+    Local aAux      := {}
+    Local oEstrut   := oGrid:GetStruct()
+    Local aCmpGrid  := oEstrut:GetFields()
+    Local cCampo    := ""
+    Local uConteudo := NIL 
+    Local nx        := 0
+    Local nc        := 0
+    Local aPH6      := {}
+
+    __aZZ6    := {}
+    __aZZ62    := {}
+
+    If nFolder == 1
+        aZZ6      := aClone(__aZZ6)
+    ElseIf nFolder == 2
+        aZZ62      := aClone(__aZZ62)
+    EndIf 
+
+    For nx := 1 to len(aZZ6) 
+        
+        aAux := {}
+        For nc := 1 to len(aCmpGrid)
+            cCampo    := aCmpGrid[nC, 3]
+
+            uConteudo := GetItens(cCampo, aZZ6[nx])
+            aadd(aAux, uConteudo)
+        Next 
+        aAdd(aRet,{0 , aClone(aAux)})
+    Next 
+
+Return aRet
+
+Static Function LeItens(oGrid, oModel, nFolder)
+    Local aRet      := {}
+    Local aAux      := {}
+    Local oEstrut   := oGrid:GetStruct()
+    Local aCmpGrid  := oEstrut:GetFields()
+    Local oObjCrn   := oModel:GetModel('ZZ6DETAIL' + Str(nFolder, 1))
+    
+    Local cCampo    := ""
+    Local uConteudo := NIL 
+    Local nx        := 0
+    Local nc        := 0
+    Local aPH5      := {}
+
+    Local nPosZZ6   := oObjCrn:GetValue('ZZ6_DOC')
+    Local nPosUlt   := 0
+
+    If nFolder == 1 
+        If nPosZZ6 > 0
+            nPosUlt := len(__aZZ6[nPosZZ6])
+            aZZ5    := aClone(__aZZ6[nPosZZ6, nPosUlt, 2])
+        EndIf 
+    ElseIf nFolder == 2 
+        If nZZ6 > 0
+            nPosUlt := len(__aZZ62[nPosZZ6])
+            aZZ5    := aClone(__aZZ62[nPosZZ6, nPosUlt, 2])
+        EndIf
+    EndIf 
+
+    For nx := 1 to len(aZZ5)
+        aAux := {}
+        For nc := 1 to len(aCmpGrid)
+            cCampo    := aCmpGrid[nC, 3]
+            uConteudo := GetItens(cCampo, aZZ5[nx])
+            aadd(aAux, uConteudo)
+        Next 
+        aAdd(aRet,{0 , aClone(aAux)})
+    Next 
+
+Return aRet
+
+
+User Function AprovPCO()
+Local aParamBox	:= {}
+Local cTitulo := "Parâmetros"
+Local cDataDe :=  dDataBase
+Local cDataAt :=  dDataBase
+Local cAlias := "ZZ6"
+Local lRet   := .T.
+Local lRetorno := .F.
+Local cQuery := ""
+Local cTmpZZ6 := GetNextAlias()
+
+//Local cUser :=  FwFldGet("ZZ6_USER")    
+//Local cFil :=  FwFldGet("ZZ6_FILIAL")
+//Local cDoc :=  FwFldGet("ZZ6_DOC")
+Local aRet		:= {}
+Local aAux		:= {}
+
+(cAlias)->(dbSelectArea(cAlias))
+(cAlias)->(dbSetOrder(1))
+
+AADD(aParamBox,{1,"Data De"	, cDataDe	, "99/99/9999", "NaoVazio()",,, 60, .T.})
+AADD(aParamBox,{1,"Data Ate", cDataAt	, "99/99/9999", "NaoVazio()",,, 60, .T.})
+
+If !ParamBox(aParamBox, cTitulo, @aRet,,,,,,,, .F.) 
+	Return( .F. )
+EndIf
+
+         //u_ValidaCal(FwFldGet("ZZ6_DATA") , lRetorno )
+       //cData := DtoS(FwFldGet("ZZ6_DATA"))
+        cQuery := " SELECT ZZ6.ZZ6_FILIAL, ZZ6.ZZ6_DATA, ZZ5.ZZ5_DATA, ZZ5.ZZ5_USER, ZZ5.ZZ5_STATUS "
+        cQuery += " FROM " + RetSQLName("ZZ6") + " ZZ6, " +  RetSQLName("ZZ5") + " ZZ5 " 
+        cQuery += " WHERE ZZ5.D_E_L_E_T_ = ' ' AND ZZ6.D_E_L_E_T_ = ' ' "  
+        cQuery += " AND ZZ5.ZZ5_FILIAL = '" + xFilial("ZZ5") + "' "
+        cQuery += " AND ZZ5.ZZ5_FILIAL = ZZ6.ZZ6_FILIAL "
+        cQuery += " AND ZZ6.ZZ6_DATA BETWEEN '" + DtoS(cDataDe) + "' AND '" + DtoS(cDataAt) + "' "
+        cQuery += " AND ZZ5.ZZ5_STATUS IN (1,2,4) "  
+//        cQuery += " AND ZZ4.ZZ4_STATUS = 'A' "
+        
+        cQuery := ChangeQuery(cQuery)
+    
+        If Select(cTmpZZ6) > 0
+            DbSelectArea(cTmpZZ6)
+            (cTmpZZ6)->(DbCloseArea())
+        EndIf				
+                        
+        dbUseArea(.T., "TOPCONN", TcGenQry(,,cQuery), cTmpZZ6, .T., .F.)
+                                    
+        If !(cTmpZZ6)->(Eof())
+
+
+           
+            return
+
+
+        EndIf
+
+
+Return
