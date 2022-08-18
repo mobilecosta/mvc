@@ -47,11 +47,12 @@ Static Function ModelDef()
     // MPFORMMODEL():New(< cID >, < bPre >, < bPost >, < bCommit >, < bCancel >)-> NIL
 	Local oModel   := MPFormModel():New('TINCM001', { |oModel|GatZZ6()}, /*{ |oModel| TINCA01POS(oModel)}*/, { |oModel| TINCA01GRV(oModel)})
     
-	/*
+/*	
  aAux := {} 
- aAux := FWStruTrigger('ZZ5_DOC','ZZ6_DOC','GatZZ6(M->ZZ5_DOC)',.F.) 
- oStruZA4:AddTrigger(aAux[1],aAux[2],aAux[3],aAux[4]) 
- */
+ aAux := FWStruTrigger('ZZ5_DATA','ZZ6_DATA','GatZZ6(M->ZZ5_DATA)',.F.) 
+ oStruZZ6:AddTrigger(aAux[1],aAux[2],aAux[3],aAux[4]) 
+ //oStruZZ6:AddTrigger("ZZ5_DATA", "ZZ6_DATA", { |data| data>=dDataBase } , { |data| data<=dDataBase })
+*/
  // //oStruct:AddTrigger("Campo Origem", "Campo Destino", "Bloco de código na validação da execução do gatilho", "Bloco de código na execução do gatilho")
 
 	oModel:AddFields( 'ZZ5MASTER',, oStruZZ5)
@@ -84,10 +85,10 @@ Static Function ModelDef()
 									  { 'ZZ6_DOC', 'ZZ5_DOC'  } ,; 
                                       { 'ZZ6_TIPO', "'C'"  } },; 
 		                              ZZ6->(IndexKey(3)) )
-
+    oModel:GetModel('ZZ62DETAIL'):SetMaxLine( 1 )
     oModel:GetModel('ZZ5MASTER'):SetDescription("SOLICITAÇÃO DE RECURSOS")
-	oModel:GetModel('ZZ6DETAIL'):SetDescription("DESTINO DOS RECURSOS")
-    oModel:GetModel('ZZ62DETAIL'):SetDescription("ORIGEM DOS RECURSOS")
+	oModel:GetModel('ZZ6DETAIL'):SetDescription("DESTINO DOS RECURSOS-credito")
+    oModel:GetModel('ZZ62DETAIL'):SetDescription("ORIGEM DOS RECURSOS-debito")
  //   oModel:InstallEvent("TINCA001EV", /*cOwner*/, oCommit)
 
  Return oModel
@@ -118,11 +119,11 @@ Static Function ViewDef()
 oStruZZ6:RemoveField('ZZ6_DOC')
 oStruZZ6:RemoveField('ZZ6_TIPO')
 	OView:SetOwnerView('VIEW_ZZ6', 'INFERIOR')
-	OView:EnableTitleView('VIEW_ZZ6', 'ORIGEM DOS RECURSOS')
+	OView:EnableTitleView('VIEW_ZZ6', 'ORIGEM DOS RECURSOS-debito')
 
 	oView:AddGrid('VIEW_ZZ62', oStruZZ62, 'ZZ62DETAIL')
     OView:SetOwnerView('VIEW_ZZ62', 'BAIXO')
-	OView:EnableTitleView('VIEW_ZZ62', 'DESTINO DOS RECURSOS')
+	OView:EnableTitleView('VIEW_ZZ62', 'DESTINO DOS RECURSOS-credito')
 oStruZZ62:RemoveField('ZZ6_DOC')
 oStruZZ62:RemoveField('ZZ6_TIPO')
 	//oView:SetViewCanActivate({|oView| VldView(oView)})
@@ -384,7 +385,7 @@ Return
 Static Function GatZZ6(OmODEL)
 Local lRet := .T.
 Local oModel := FWModelActive()
-Local cDesc := oModel:GetValue('ZZ5MASTER','ZZ5_DOC')
+Local cDesc := oModel:GetValue('ZZ5MASTER','ZZ5_DATA')
 
 
 	Local cError	 := ""
@@ -397,6 +398,7 @@ Local cDesc := oModel:GetValue('ZZ5MASTER','ZZ5_DOC')
     Local cRet      := ""
     Local cID       := ""
     Local cIDDescr  := ""
+    Local cAlias    := "ZZ4"
 
 	If oModel == Nil
 		Return .F.
@@ -409,16 +411,33 @@ Local cDesc := oModel:GetValue('ZZ5MASTER','ZZ5_DOC')
     cFilOri    := oZZ5:GetValue('ZZ5_FILIAL')
     cID        := oZZ5:GetValue('ZZ5_DOC')
     cIDDescr   := oZZ5:GetValue('ZZ5_USER')
-        cdATA   := oZZ5:GetValue('ZZ5_DATA')
+    cdATA      := oZZ5:GetValue('ZZ5_DATA')
+    
+    
     oZZ6 := oModel:GetModel('ZZ6DETAIL')
- /*   For nPos := 1 To oZZ6:Length()
+
+    //oZZ6:SetValue('ZZ62DETAIL','ZZ6_DATA',cdATA)
+ /*   
+    If oZZ6:Length() > 0
+        oZZ6:SetValue('ZZ6DETAIL','ZZ6_DATA',cdATA)
+    For nPos := 1 To oZZ6:Length()
         oZZ6:GoLine(nPos)
         If nOperation == MODEL_OPERATION_INSERT
-            oModel:SetValue('ZZ6DETAIL','ZZ6_DOC',cDesc)
+            oZZ6:SetValue('ZZ6DETAIL','ZZ6_DATA',cdATA)
+            (cAlias)->(dbSelectArea(cAlias))
+            (cAlias)->(dbSetOrder(1))
+            if (cAlias)->(dbseek(xFilial(cAlias) + FwFldGet(cAlias+"_FILIAL")) + cdATA )
+                cError := "Data já existe na base de dados"
+                lRet := .F.
+                //Exit 
+            EndIf
             //oModel:SetValue('ZZ62DETAIL','ZZ6_DOC',cDesc)
             //oModel:SetValue('ZZ62DETAIL','ZZ6_DATA',cdATA)
         EndIf
- /*       If nOperation == MODEL_OPERATION_DELETE
+    next 
+    Endif   */
+ /*   
+       If nOperation == MODEL_OPERATION_DELETE
             If oZZ6:GetValue("ZZ6_STEXEC") <> "1"
                 cError := "A rotina [" + oZZ6:GetValue("ZZ6_CODROT") + "] já teve o status de execução iniciado. Processo não pode ser excluido !"
                 Exit
@@ -498,7 +517,6 @@ Static Function LeItens(oGrid, oModel, nFolder)
     Local uConteudo := NIL 
     Local nx        := 0
     Local nc        := 0
-    Local aPH5      := {}
 
     Local nPosZZ6   := oObjCrn:GetValue('ZZ6_DOC')
     Local nPosUlt   := 0
@@ -527,3 +545,149 @@ Static Function LeItens(oGrid, oModel, nFolder)
 
 Return aRet
 
+User Function SX7_Calend()
+Local cAlias := "ZZ4"
+Local lRet   := .T.
+Local lRetorno := .F.
+Local cQuery := ""
+Local cData :=  DtoS(FwFldGet("ZZ6_DATA"))//DtoS(dData) 
+Local lRet := .F.
+Local cTmpZZ4 := GetNextAlias()
+
+    (cAlias)->(dbSelectArea(cAlias))
+    (cAlias)->(dbSetOrder(1))
+
+    If FwFldGet("ZZ6_DATA") >= DDATABASE
+        //u_ValidaCal(FwFldGet("ZZ6_DATA") , lRetorno )
+       //cData := DtoS(FwFldGet("ZZ6_DATA"))
+        cQuery := " SELECT COUNT(*) PeriodoAtivo "
+        cQuery += " FROM " + RetSQLName("ZZ4") + " ZZ4 " 
+        cQuery += " WHERE ZZ4.D_E_L_E_T_ = ' ' "  
+        cQuery += " AND ZZ4.ZZ4_FILIAL = '" + xFilial("ZZ4") + "' "
+        cQuery += " AND '" + cData + "' BETWEEN ZZ4.ZZ4_DATADE AND ZZ4.ZZ4_DATAAT " 
+        cQuery += " AND ZZ4.ZZ4_STATUS = 'A' "
+        
+        cQuery := ChangeQuery(cQuery)
+    
+        If Select(cTmpZZ4) > 0
+            DbSelectArea(cTmpZZ4)
+            (cTmpZZ4)->(DbCloseArea())
+        EndIf				
+                        
+        dbUseArea(.T., "TOPCONN", TcGenQry(,,cQuery), cTmpZZ4, .T., .F.)
+                                    
+        If (cTmpZZ4)->PeriodoAtivo > 0				
+            lRet := .T.
+            lRetorno := .T.
+        else
+            lRet := .F.	
+            lRetorno := .F.										
+        EndIf
+ 
+        If !lRetorno 
+            cProblema := "Data fora do prazo permitido para este lançamento. Verifique o calendário PCO."
+            cSolucao  := "Digite uma data maior ou igual a data atual e que o calendario esteja Ativo."
+            Help(NIL, NIL, "EXIST", NIL, cProblema, 1, 0, NIL, NIL, NIL, NIL, NIL, {cSolucao})
+            lRet := .F.
+        else
+            lRet := .T.
+        EndIf
+
+    elseIf FwFldGet("ZZ6_DATA") < DDATABASE
+        //u_ValidaCal(FwFldGet("ZZ6_DATA") , lRetorno )
+       //cData := FwFldGet("ZZ6_DATA")
+        cQuery := " SELECT COUNT(*) PeriodoAtivo "
+        cQuery += " FROM " + RetSQLName("ZZ4") + " ZZ4 " 
+        cQuery += " WHERE ZZ4.D_E_L_E_T_ = ' ' "  
+        cQuery += " AND ZZ4.ZZ4_FILIAL = '" + xFilial("ZZ4") + "' "
+        cQuery += " AND '" + cData + "' BETWEEN ZZ4.ZZ4_DATADE AND ZZ4.ZZ4_DATAAT " 
+        cQuery += " AND ZZ4.ZZ4_STATUS = 'A' "
+        
+        cQuery := ChangeQuery(cQuery)
+        
+        If Select(cTmpZZ4) > 0
+            DbSelectArea(cTmpZZ4)
+            (cTmpZZ4)->(DbCloseArea())
+        EndIf				
+                        
+        dbUseArea(.T., "TOPCONN", TcGenQry(,,cQuery), cTmpZZ4, .T., .F.)
+                                    
+        If (cTmpZZ4)->PeriodoAtivo > 0				
+            lRet := .T.
+            lRetorno := .T.
+        else
+            lRet := .F.	
+            lRetorno := .F.										
+        EndIf
+ 
+        If !lRetorno 
+            cProblema := "Data fora do prazo permitido para este lançamento. Verifique o calendário PCO."
+            cSolucao  := "Digite uma data maior ou igual a data atual e que o calendario esteja Ativo."
+            Help(NIL, NIL, "EXIST", NIL, cProblema, 1, 0, NIL, NIL, NIL, NIL, NIL, {cSolucao})
+            lRet := .F.
+        else
+            lRet := .T.
+        EndIf
+       /*
+        cProblema := "Data fora do prazo permitido para este lançamento. Verifique o calendário PCO."
+        cSolucao  := "Digite uma data maior ou igual a data atual e que o calendario esteja Ativo."
+        Help(NIL, NIL, "EXIST", NIL, cProblema, 1, 0, NIL, NIL, NIL, NIL, NIL, {cSolucao})
+        lRet := .F.
+        */
+    EndIf
+
+Return lRet
+/*
+User Function ValidaCal(dData, lRetorno)
+Local cQuery := ""
+Local cData := DtoS(dData) 
+Local lRet := .F.
+Local cTmpZZ4 := GetNextAlias()
+
+    cQuery := " SELECT COUNT(*) PeriodoAtivo "
+    cQuery += " FROM " + RetSQLName("ZZ4") + " ZZ4 " 
+    cQuery += " WHERE ZZ4.D_E_L_E_T_ = ' ' "  
+    cQuery += " AND ZZ4.ZZ4_FILIAL = '" + xFilial("ZZ4") + "' "
+    cQuery += " AND '" + cData + "' BETWEEN ZZ4.ZZ4_DATADE AND ZZ4.ZZ4_DATAAT " 
+    cQuery += " AND ZZ4.ZZ4_STATUS = 'A' "
+    
+    cQuery := ChangeQuery(cQuery)
+    
+    If Select(cTmpZZ4) > 0
+        DbSelectArea(cTmpZZ4)
+        (cTmpZZ4)->(DbCloseArea())
+    EndIf				
+                    
+    dbUseArea(.T., "TOPCONN", TcGenQry(,,cQuery), cTmpZZ4, .T., .F.)
+                                
+    If (cTmpZZ4)->PeriodoAtivo > 0				
+        lRet := .T.
+        lRetorno := .T.
+    else
+        lRet := .F.	
+        lRetorno := .F.										
+    EndIf
+
+Return (lRet, lRetorno)
+*/
+
+User Function ZZ6ItC()
+
+Local lRet := .F., nRetorno := 0
+
+cQuery := " SELECT AL7.AL7_USER, AKX.AKX_USER, AKY.AKY_USER, AKV.AKV_USER , MIN(AL7.R_E_C_N_O_) AS RECNO"
+cQuery += " FROM " + RetSqlName("ZZ6") + " ZZ6, " + RetSqlName("AL7") + " AL7, " + RetSqlName("AKX") + " AKX, " + RetSqlName("AKY") + " AKY, " + RetSqlName("AKV") + " AKV "
+cQuery += " WHERE AL7.D_E_L_E_T_ = ' ' AND AL7.AL7_FILIAL = '" + xFilial("AL7") + "' AND AKX.AKX_FILIAL = '" + xFilial("AKX") + "' AND AKY.AKY_FILIAL = '" + xFilial("AKY") + "' AND AKV.AKV_FILIAL = '" + xFilial("AKV") + "' "
+cQuery += " AND AL7.AL7_USER = '" + RetCodUsr() + "' "
+cQuery += " AND AKX.AKX_USER = '" + RetCodUsr() + "' "
+cQuery += " AND AKY.AKY_USER = '" + RetCodUsr() + "' "
+cQuery += " AND AKV.AKV_USER = '" + RetCodUsr() + "' "
+
+cQuery +=  "GROUP BY AL7.AL7_USER, AKX.AKX_USER, AKY.AKY_USER, AKV.AKV_USER "
+
+If JurF3Qry(cQuery, "ZZ6QRY", "RECNO", @nRetorno,, { "AL7_USER", "AL7_USER" })
+	ZZ6->(DbGoto(nRetorno))
+	lRet := .T.
+EndIf
+
+Return lRet
