@@ -671,22 +671,24 @@ Local cTmpZZ4 := GetNextAlias()
 Return (lRet, lRetorno)
 */
 
-User Function ZZ6ItC()
+// CTD = Item Contábil 		x AKY -> Controle de Acesso
+// CTH = Classes de Valores x AKV -> Controle de Acesso
+// CTT = Centro de Custo    x AKX -> Controle de Acesso
+
+User Function ZZ6XCTT()
 
 Local lRet := .F., nRetorno := 0
 
-cQuery := " SELECT AL7.AL7_USER, AKX.AKX_USER, AKY.AKY_USER, AKV.AKV_USER , MIN(AL7.R_E_C_N_O_) AS RECNO"
-cQuery += " FROM " + RetSqlName("ZZ6") + " ZZ6, " + RetSqlName("AL7") + " AL7, " + RetSqlName("AKX") + " AKX, " + RetSqlName("AKY") + " AKY, " + RetSqlName("AKV") + " AKV "
-cQuery += " WHERE AL7.D_E_L_E_T_ = ' ' AND AL7.AL7_FILIAL = '" + xFilial("AL7") + "' AND AKX.AKX_FILIAL = '" + xFilial("AKX") + "' AND AKY.AKY_FILIAL = '" + xFilial("AKY") + "' AND AKV.AKV_FILIAL = '" + xFilial("AKV") + "' "
-cQuery += " AND AL7.AL7_USER = '" + RetCodUsr() + "' "
-cQuery += " AND AKX.AKX_USER = '" + RetCodUsr() + "' "
-cQuery += " AND AKY.AKY_USER = '" + RetCodUsr() + "' "
-cQuery += " AND AKV.AKV_USER = '" + RetCodUsr() + "' "
+cQuery := "SELECT AL7.AL7_USER, AKX.AKX_USER, AKY.AKY_USER, AKV.AKV_USER , MIN(AL7.R_E_C_N_O_) AS RECNO"
+cQuery +=  "FROM" + RetSqlName("AL7") + " AL7 " 
+cQuery +=  "JOIN" + RetSqlName("AKX") + " AKX ON AKX_FILIAL = AL7_FILIAL " 
+cQuery += "WHERE AL7.AL7_FILIAL = '" + xFilial("AL7") + "' AND AL7_ENTIDA = 'CTT' "
+ Query +=   "AND AL7.AL7_USER = '" + RetCodUsr() + "' AND AL7.D_E_L_E_T_ = ' '"
 
 cQuery +=  "GROUP BY AL7.AL7_USER, AKX.AKX_USER, AKY.AKY_USER, AKV.AKV_USER "
 
 If JurF3Qry(cQuery, "ZZ6QRY", "RECNO", @nRetorno,, { "AL7_USER", "AL7_USER" })
-	ZZ6->(DbGoto(nRetorno))
+	CTD->(DbGoto(nRetorno))
 	lRet := .T.
 EndIf
 
