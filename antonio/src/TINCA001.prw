@@ -675,19 +675,16 @@ Return (lRet, lRetorno)
 // CTH = Classes de Valores x AKV -> Controle de Acesso
 // CTT = Centro de Custo    x AKX -> Controle de Acesso
 
-User Function ZZ6XCTT()
+User Function AKYXCTD()
 
 Local lRet := .F., nRetorno := 0
 
-cQuery := "SELECT AL7.AL7_USER, AKX.AKX_USER, AKY.AKY_USER, AKV.AKV_USER , MIN(AL7.R_E_C_N_O_) AS RECNO"
-cQuery +=  "FROM" + RetSqlName("AL7") + " AL7 " 
-cQuery +=  "JOIN" + RetSqlName("AKX") + " AKX ON AKX_FILIAL = AL7_FILIAL " 
-cQuery += "WHERE AL7.AL7_FILIAL = '" + xFilial("AL7") + "' AND AL7_ENTIDA = 'CTT' "
- Query +=   "AND AL7.AL7_USER = '" + RetCodUsr() + "' AND AL7.D_E_L_E_T_ = ' '"
+cQuery := "SELECT CTD_ITEM, CTD_DESC01, CTD.R_E_C_N_O_ AS RECNO"
+cQuery +=  "FROM" + RetSqlName("AKY") + " AKY " 
+cQuery +=  "JOIN" + RetSqlName("CTD") + " CTD ON CTD_FILIAL = '" + xFilial("CTD") + "' AND CTD_ITEM BETWEEN AKY_IC_INI AND AKY_IC_FIN "
+cQuery += "WHERE AKY_FILIAL = '" + xFilial("AKY") + "' AND AKY_USER = '" + RetCodUsr() + "' AND AKY.D_E_L_E_T_ = ' '"
 
-cQuery +=  "GROUP BY AL7.AL7_USER, AKX.AKX_USER, AKY.AKY_USER, AKV.AKV_USER "
-
-If JurF3Qry(cQuery, "ZZ6QRY", "RECNO", @nRetorno,, { "AL7_USER", "AL7_USER" })
+If JurF3Qry(cQuery, "AKYQRY", "RECNO", @nRetorno,, { "CTD_ITEM", "CTD_DESC01" })
 	CTD->(DbGoto(nRetorno))
 	lRet := .T.
 EndIf
